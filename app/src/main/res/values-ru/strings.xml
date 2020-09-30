@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Погода</string>
+    <string name="pressure_main">Давление:</string>
+    <string name="cloudiness_main">Облачность:</string>
+    <string name="windSpeed_main">Скорость ветра:</string>
+    <string name="feelsLike_main">Ощущается:</string>
+    <string name="pop_main">Вероятность осадков:</string>
+</resources>
