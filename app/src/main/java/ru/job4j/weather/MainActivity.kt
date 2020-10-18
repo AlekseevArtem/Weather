@@ -27,20 +27,18 @@ import ru.job4j.weather.fragments.FragmentDaysRV
 import ru.job4j.weather.fragments.FragmentHoursRV
 import ru.job4j.weather.fragments.FragmentMainInfo
 import ru.job4j.weather.retrofit.RetrofitForJSON
-import ru.job4j.weather.store.Answer
-import ru.job4j.weather.store.Day
-import ru.job4j.weather.store.MemStore
-import ru.job4j.weather.store.SimpleDB
+import ru.job4j.weather.store.*
 import java.util.*
 
 class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, CallbackToActivity {
     private var mLatLng: LatLng? = null
     private val mMemStore: MemStore = MemStore.getMemStore()
+    private val db = RoomDB.getDatabase(applicationContext)
     private var mSavedInRoom = false
     private var mDayPosition = 0
     private var mHourPosition = 0
     private val GEO = 0
-    private val PLACES = 0
+    private val PLACES = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +52,7 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         mMemStore.answer?.city?.let { city -> setTitle(city) }
         if (!mSavedInRoom && mMemStore.answer == null) {
             GlobalScope.launch(Dispatchers.Main) {
-                val answer = SimpleDB.getDatabase(applicationContext).getAnswer(GEO)
+                val answer = db.getAnswerDao().getAnswer(GEO)
                 answer?.let {
                     mSavedInRoom = true
                     mMemStore.saveAnswer(it)
@@ -157,11 +155,7 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
             fillingTheUI()
             setTitle(it.city)
             GlobalScope.launch(Dispatchers.Main) {
-                if (body.answerId == GEO && !mSavedInRoom) {
-                    SimpleDB.getDatabase(applicationContext).insertAnswer(it)
-                } else if (body.answerId == GEO && mSavedInRoom) {
-                    SimpleDB.getDatabase(applicationContext).updateAnswer(it)
-                }
+                db.getAnswerDao().insertAnswer(it)
             }
         }
     }

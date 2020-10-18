@@ -4,12 +4,12 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 
-@Database(entities = [Answer::class, Answer.Details::class, Answer.Details.Weather::class], version = 1)
+@Database(entities = [Answer::class], version = 1)
+@TypeConverters(DetailsListConverter::class)
 abstract class RoomDB : RoomDatabase() {
     abstract fun getAnswerDao(): AnswerDao
-    abstract fun getWeatherDao(): WeatherDao
-    abstract fun getDetailDao(): DetailsDao
 
     companion object {
         @Volatile
