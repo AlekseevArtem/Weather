@@ -1,6 +1,9 @@
 package ru.job4j.weather.store
 
-import androidx.room.*
+import androidx.room.Embedded
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 import com.google.gson.annotations.SerializedName
 
 @Entity(tableName = "answer")
@@ -10,10 +13,14 @@ data class Answer(
         var message: Int = 0,
         var cnt: Int = 0,
         @Embedded var city: City = City(),
-        @TypeConverters (DetailsListConverter::class) var list: List<Details> = listOf()
+        @TypeConverters(DetailsListConverter::class) var list: List<Details> = listOf(),
 ) {
+    companion object {
+        const val GEO = 0
+        const val PLACES = 1
+    }
+
     data class Details(
-            @PrimaryKey(autoGenerate = true) var detailsId: Int = 0,
             @SerializedName("dt") var date: Long = 0L,
             @Embedded var main: Main = Main(),
             var weather: List<Weather> = mutableListOf(),
@@ -38,7 +45,6 @@ data class Answer(
         )
 
         data class Weather(
-                @PrimaryKey(autoGenerate = true) var weatherId: Int = 0,
                 var id: Int = 0,
                 var main: String = "",
                 var description: String = "",

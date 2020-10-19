@@ -13,5 +13,4 @@ class DetailsListConverter : Serializable {
     @TypeConverter
     fun toDetailsList(json: String?): List<Answer.Details>? =
             Gson().fromJson<List<Answer.Details>>(json, object : TypeToken<List<Answer.Details>>() {}.type)
-
 }

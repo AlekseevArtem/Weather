@@ -6,4 +6,17 @@
     <string name="windSpeed_main">Wind speed:</string>
     <string name="feelsLike_main">Feels like:</string>
     <string name="pop_main">POP:</string>
+    <string name="error_check_geolocation">Check that geolocation is enabled or try again later</string>
+    <string name="millimeters_of_mercury">mm Hg</string>
+    <string name="meters_per_second">m/s</string>
+
+    Стороны света
+    <string name="wind_north">N</string>
+    <string name="wind_northeast">NE</string>
+    <string name="wind_east">E</string>
+    <string name="wind_southeast">SE</string>
+    <string name="wind_south">S</string>
+    <string name="wind_southwest">SW</string>
+    <string name="wind_west">W</string>
+    <string name="wind_northwest">NW</string>
 </resources>

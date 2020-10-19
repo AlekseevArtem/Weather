@@ -6,4 +6,17 @@
     <string name="windSpeed_main">Скорость ветра:</string>
     <string name="feelsLike_main">Ощущается:</string>
     <string name="pop_main">Вероятность осадков:</string>
+    <string name="error_check_geolocation">Убедитесь, что геолокация включена, или повторите попытку позже</string>
+    <string name="millimeters_of_mercury">мм рт. ст.</string>
+    <string name="meters_per_second">м/с</string>
+
+    Стороны света
+    <string name="wind_north">С</string>
+    <string name="wind_northeast">СВ</string>
+    <string name="wind_east">В</string>
+    <string name="wind_southeast">ЮВ</string>
+    <string name="wind_south">Ю</string>
+    <string name="wind_southwest">ЮЗ</string>
+    <string name="wind_west">З</string>
+    <string name="wind_northwest">СЗ</string>
 </resources>

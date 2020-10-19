@@ -1,4 +1,4 @@
-package ru.job4j.weather
+package ru.job4j.weather.activity
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -8,7 +8,6 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -19,26 +18,30 @@ import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import moxy.MvpAppCompatActivity
+import moxy.presenter.InjectPresenter
+import moxy.presenter.ProvidePresenter
+import ru.job4j.weather.R
 import ru.job4j.weather.fragments.CallbackToActivity
 import ru.job4j.weather.fragments.FragmentDaysRV
 import ru.job4j.weather.fragments.FragmentHoursRV
 import ru.job4j.weather.fragments.FragmentMainInfo
-import ru.job4j.weather.retrofit.RetrofitForJSON
+import ru.job4j.weather.presenter.MainActivityPresenter
 import ru.job4j.weather.store.*
+import ru.job4j.weather.view.MainActivityView
 import java.util.*
 
-class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, CallbackToActivity {
-    private var mLatLng: LatLng? = null
-    private val mMemStore: MemStore = MemStore.getMemStore()
-    private val db = RoomDB.getDatabase(applicationContext)
-    private var mSavedInRoom = false
-    private var mDayPosition = 0
-    private var mHourPosition = 0
-    private val GEO = 0
-    private val PLACES = 1
+class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivity {
+    private var coordinates: LatLng? = null
+    private lateinit var details: Answer.Details
+    private lateinit var days: List<Day>
+    private lateinit var currentLocation: Answer.City
+
+    @InjectPresenter
+    lateinit var activityPresenter: MainActivityPresenter
+
+    @ProvidePresenter
+    fun provideMainActivityPresenter(): MainActivityPresenter = MainActivityPresenter(applicationContext)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,33 +49,12 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         initPlacesAPI()
         if (isLocationPermissionGranted()) initLocListener()
         initSwipeToRefresh()
-        mSavedInRoom = savedInstanceState?.getBoolean("savedInRoom") ?: false
-        mDayPosition = savedInstanceState?.getInt("day") ?: 0
-        mHourPosition = savedInstanceState?.getInt("hour") ?: 0
-        mMemStore.answer?.city?.let { city -> setTitle(city) }
-        if (!mSavedInRoom && mMemStore.answer == null) {
-            GlobalScope.launch(Dispatchers.Main) {
-                val answer = db.getAnswerDao().getAnswer(GEO)
-                answer?.let {
-                    mSavedInRoom = true
-                    mMemStore.saveAnswer(it)
-                    fillingTheUI()
-                    setTitle(it.city)
-                }
-            }
-        }
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        outState.putBoolean("savedInRoom", mSavedInRoom)
-        outState.putInt("day", mDayPosition)
-        outState.putInt("hour", mHourPosition)
+        activityPresenter.getAnswerFromDB()
     }
 
     private fun initSwipeToRefresh() {
         swipeRefreshLayout.apply {
-            setOnRefreshListener { callApi(mLatLng) }
+            setOnRefreshListener { callApi(coordinates) }
             setColorSchemeResources(
                     android.R.color.holo_blue_bright,
                     android.R.color.holo_green_light,
@@ -82,19 +64,20 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         }
     }
 
-    private fun callApi(coordinates: LatLng?, type: Int = GEO) {
+    private fun callApi(coordinates: LatLng?, type: Int = Answer.GEO) {
         if (coordinates != null) {
-            RetrofitForJSON(this, coordinates, type).callForAnswer()
+            activityPresenter.callApi(coordinates, type)
         } else {
             swipeRefreshLayout.isRefreshing = false
             if (isLocationPermissionGranted()) initLocListener()
-            Toast.makeText(this, "Проверьте что геолокация включена или повторите позже", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.error_check_geolocation), Toast.LENGTH_LONG).show()
         }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
         if (requestCode == 1 && grantResults.isNotEmpty()
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
             initLocListener()
         }
     }
@@ -104,10 +87,7 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         (autocomplete_fragment as AutocompleteSupportFragment).apply {
             setPlaceFields(listOf(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG))
             setOnPlaceSelectedListener(object : PlaceSelectionListener {
-                override fun onPlaceSelected(place: Place) {
-                    callApi(place.latLng, PLACES)
-                }
-
+                override fun onPlaceSelected(place: Place) = callApi(place.latLng, Answer.PLACES)
                 override fun onError(status: Status) {}
             })
         }
@@ -117,7 +97,7 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
     private fun initLocListener() {
         val loc: LocationListener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
-                mLatLng = LatLng(location.latitude, location.longitude)
+                coordinates = LatLng(location.latitude, location.longitude)
             }
 
             override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
@@ -140,28 +120,24 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         return true
     }
 
-    private fun fillingTheUI() {
-        (days_fragment as FragmentDaysRV).updateUI(mMemStore.days, mDayPosition)
-        (hours_fragment as FragmentHoursRV).updateUI(mMemStore.days[mDayPosition].hours, mHourPosition)
-        var position = mHourPosition
-        mMemStore.days.forEachIndexed { index, day -> if (index < mDayPosition) position+=day.hours.size }
-        mMemStore.answer?.list?.get(position)?.let { (main_info_fragment as FragmentMainInfo).updateUI(it) }
+    private fun fillingTheUI(day: Int , hour: Int) {
+        (days_fragment as FragmentDaysRV).updateUI(days, day)
+        (hours_fragment as FragmentHoursRV).updateUI(days[day].hours, hour)
+        (main_info_fragment as FragmentMainInfo).updateUI(details)
+        title = "${currentLocation.name}, ${currentLocation.country} "
     }
 
-    override fun successAnswer(response: Boolean, body: Answer?, code: Int) {
+    override fun successAnswer(days: List<Day>, details: Answer.Details, city: Answer.City, day: Int, hour: Int) {
         swipeRefreshLayout.isRefreshing = false
-        body?.let {
-            mMemStore.saveAnswer(it)
-            fillingTheUI()
-            setTitle(it.city)
-            GlobalScope.launch(Dispatchers.Main) {
-                db.getAnswerDao().insertAnswer(it)
-            }
-        }
+        this.days = days
+        this.details = details
+        this.currentLocation = city
+        fillingTheUI(day,hour)
     }
 
-    private fun setTitle(city: Answer.City) {
-        title = "${city.name}, ${city.country} "
+    override fun successWithError(code: Int) {
+        swipeRefreshLayout.isRefreshing = false
+        Toast.makeText(this, code, Toast.LENGTH_LONG).show()
     }
 
     override fun failedAnswer(response: String) {
@@ -169,10 +145,13 @@ class MainActivity : AppCompatActivity(), RetrofitForJSON.GetAnswerFromAPI, Call
         Toast.makeText(this, response, Toast.LENGTH_LONG).show()
     }
 
-    override fun updatePositions(day: Int, hour: Int) {
-        if(day != -1) mDayPosition = day
-        mHourPosition = hour
-        fillingTheUI()
+    override fun updatePositions(day: Int, hour: Int, details: Answer.Details) {
+        this.details = details
+        fillingTheUI(day, hour)
     }
+
+    override fun updatePositionsFromFragment(day: Int, hour: Int) =
+        activityPresenter.changeCurrentDayAndHour(day, hour)
+
 }
 

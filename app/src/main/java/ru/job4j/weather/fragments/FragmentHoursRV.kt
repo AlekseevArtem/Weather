@@ -1,39 +1,34 @@
 package ru.job4j.weather.fragments
 
-import android.content.res.Resources
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.getColor
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textview.MaterialTextView
 import ru.job4j.weather.R
 
+/**
+ * Created by Artem Alexeev on 11.10.2020.
+ * Fragment with RecyclerView for display all available hours in selected day
+ * Ruled by MainActivity
+ */
 class FragmentHoursRV : Fragment() {
-    private lateinit var mViewForHours: RecyclerView
-    private val mHours: MutableList<String> = mutableListOf()
-    private val mPosition: MutableList<Int> = mutableListOf(0)
+    private lateinit var viewForHours: RecyclerView
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view: View = inflater.inflate(R.layout.fragment_recyclerview, container, false)
-        retainInstance = true
-        mViewForHours = view.findViewById(R.id.list_of_items)
-        mViewForHours.layoutManager = LinearLayoutManager(activity, RecyclerView.VERTICAL, false)
-        mViewForHours.adapter = HoursAdapter(mHours, mPosition)
+        viewForHours = view.findViewById(R.id.list_of_items)
+        viewForHours.layoutManager = LinearLayoutManager(activity, RecyclerView.VERTICAL, false)
         return view
     }
 
     fun updateUI(hours: List<String>, position: Int) {
-        this.mHours.clear()
-        this.mHours.addAll(hours)
-        mPosition[0] = position
-        mViewForHours.adapter = HoursAdapter(mHours, mPosition)
+        viewForHours.adapter = HoursAdapter(hours, position)
     }
 
     class HoursHolder(inflater: LayoutInflater, parent: ViewGroup) :
@@ -48,21 +43,21 @@ class FragmentHoursRV : Fragment() {
                 itemView.findViewById<ConstraintLayout>(R.id.hour).setBackgroundColor(getColor(itemView.context, R.color.background))
 
         private fun onClick(position: Int): Unit =
-                (itemView.context as CallbackToActivity).updatePositions(-1, position)
+                (itemView.context as CallbackToActivity).updatePositionsFromFragment(-1, position)
     }
 
-    class HoursAdapter(private val mHours: List<String>, private val mPosition: List<Int>) : RecyclerView.Adapter<HoursHolder>() {
+    class HoursAdapter(private val hours: List<String>, private val position: Int) : RecyclerView.Adapter<HoursHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HoursHolder =
                 HoursHolder(LayoutInflater.from(parent.context), parent)
 
         override fun onBindViewHolder(holder: HoursHolder, position: Int) {
-            holder.bind(mHours[position], position)
-            if (position == mPosition[0]) {
+            holder.bind(hours[position], position)
+            if (position == this.position) {
                 holder.setActivated()
             }
         }
 
-        override fun getItemCount() = mHours.size
+        override fun getItemCount() = hours.size
     }
 
 }
