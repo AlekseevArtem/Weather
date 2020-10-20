@@ -29,6 +29,7 @@ class FragmentHoursRV : Fragment() {
 
     fun updateUI(hours: List<String>, position: Int) {
         viewForHours.adapter = HoursAdapter(hours, position)
+        viewForHours.scrollToPosition(position)
     }
 
     class HoursHolder(inflater: LayoutInflater, parent: ViewGroup) :

@@ -1,6 +1,5 @@
 package ru.job4j.weather.presenter
 
-import android.content.Context
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.*
 
@@ -13,7 +12,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
-import ru.job4j.weather.R
+import ru.job4j.weather.App
+import ru.job4j.weather.di.RemoteModule
 
 import ru.job4j.weather.store.Answer
 import ru.job4j.weather.store.Day
@@ -23,64 +23,59 @@ import ru.job4j.weather.store.RoomDB
 import ru.job4j.weather.view.MainActivityView
 import java.text.SimpleDateFormat
 import java.util.*
+import javax.inject.Inject
 
 
 @InjectViewState
-class MainActivityPresenter(private val context: Context) : MvpPresenter<MainActivityView>() {
+class MainActivityPresenter : MvpPresenter<MainActivityView>() {
     private var answer: Answer? = null
     private val days: MutableList<Day> = mutableListOf()
-    private val db: RoomDB = RoomDB.getDatabase(context)
+    @Inject
+    lateinit var db: RoomDB
+    @Inject
+    lateinit var jsonAnswerHolderApi: RemoteModule.JsonAnswerHolderApi
     private var day: Int = 0
     private var hour: Int = 0
 
-    private interface JsonAnswerHolderApi {
-        @GET("forecast")
-        fun getAnswer(
-                @Query("lat") lat: Double,
-                @Query("lon") long: Double,
-                @Query("appid") key: String,
-                @Query("units") units: String = "metric",
-        ): Call<Answer>
+    init {
+        App.dagger?.inject(this)
     }
 
     fun getAnswerFromDB(type: Int = Answer.GEO) {
-       if (answer == null) {
-           GlobalScope.launch {
-               answer = db.getAnswerDao().getAnswer(type)
-               generateDays()
-               withContext(Dispatchers.Main) {
-                   viewState.successAnswer(days, answer!!.list[getPositionOfDetails()], answer!!.city, day, hour)
-               }
-           }
+        if (answer == null) {
+            GlobalScope.launch {
+                answer = db.getAnswerDao().getAnswer(type)
+                generateDays()
+                answer?.let {
+                    withContext(Dispatchers.Main) {
+                        viewState.successAnswer(days, it.list[getPositionOfDetails()], it.city, day, hour)
+                    }
+                }
+            }
         }
     }
 
-    fun callApi(coordinates: LatLng, type: Int) {
-        val retrofit = Retrofit.Builder()
-                .baseUrl("https://api.openweathermap.org/data/2.5/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .build()
-        val call: Call<Answer> = retrofit
-                .create(JsonAnswerHolderApi::class.java)
-                .getAnswer(coordinates.latitude, coordinates.longitude, context.getString(R.string.geo_api_key))
-        call.enqueue(object : Callback<Answer> {
-            override fun onResponse(call: Call<Answer>, response: Response<Answer>) {
-                if (response.isSuccessful) {
-                    response.body()!!.answerId = type
-                    answer = response.body()
-                    generateDays()
-                    day = 0
-                    hour = 0
-                    viewState.successAnswer(days, answer!!.list[getPositionOfDetails()], answer!!.city, day, hour)
-                    GlobalScope.launch { db.getAnswerDao().insertAnswer(response.body()!!) }
-                } else {
-                    viewState.successWithError(response.code())
-                }
-            }
+    fun callApi(coordinates: LatLng, type: Int, key: String) {
+        jsonAnswerHolderApi
+                .getAnswer(coordinates.latitude, coordinates.longitude, key)
+                .enqueue(object : Callback<Answer> {
+                    override fun onResponse(call: Call<Answer>, response: Response<Answer>) {
+                        if (response.isSuccessful) {
+                            answer = response.body()
+                            answer!!.answerId = type
+                            generateDays()
+                            day = 0
+                            hour = 0
+                            viewState.successAnswer(days, answer!!.list[getPositionOfDetails()], answer!!.city, day, hour)
+                            GlobalScope.launch { db.getAnswerDao().insertAnswer(response.body()!!) }
+                        } else {
+                            viewState.successWithError(response.code())
+                        }
+                    }
 
-            override fun onFailure(call: Call<Answer>, t: Throwable): Unit =
-                    viewState.failedAnswer(t.message.toString())
-        })
+                    override fun onFailure(call: Call<Answer>, t: Throwable): Unit =
+                            viewState.failedAnswer(t.message.toString())
+                })
     }
 
     fun changeCurrentDayAndHour(day: Int, hour: Int) {
@@ -89,7 +84,7 @@ class MainActivityPresenter(private val context: Context) : MvpPresenter<MainAct
         viewState.updatePositions(this.day, this.hour, answer!!.list[getPositionOfDetails()])
     }
 
-    private fun getPositionOfDetails(): Int{
+    private fun getPositionOfDetails(): Int {
         var position = hour
         days.forEachIndexed { index, day -> if (index < this.day) position += day.hours.size }
         return position

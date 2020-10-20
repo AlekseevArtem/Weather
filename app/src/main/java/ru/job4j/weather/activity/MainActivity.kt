@@ -9,7 +9,6 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.common.api.Status
 import com.google.android.gms.maps.model.LatLng
@@ -40,9 +39,6 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
     @InjectPresenter
     lateinit var activityPresenter: MainActivityPresenter
 
-    @ProvidePresenter
-    fun provideMainActivityPresenter(): MainActivityPresenter = MainActivityPresenter(applicationContext)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -66,7 +62,7 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
 
     private fun callApi(coordinates: LatLng?, type: Int = Answer.GEO) {
         if (coordinates != null) {
-            activityPresenter.callApi(coordinates, type)
+            activityPresenter.callApi(coordinates, type, getString(R.string.geo_api_key))
         } else {
             swipeRefreshLayout.isRefreshing = false
             if (isLocationPermissionGranted()) initLocListener()
@@ -152,6 +148,5 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
 
     override fun updatePositionsFromFragment(day: Int, hour: Int) =
         activityPresenter.changeCurrentDayAndHour(day, hour)
-
 }
 
