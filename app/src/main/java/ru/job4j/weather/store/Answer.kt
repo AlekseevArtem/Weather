@@ -6,6 +6,11 @@ import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.google.gson.annotations.SerializedName
 
+/**
+ * Created by Artem Alexeev on 21.10.2020.
+ * Data class exactly for https://api.openweathermap.org
+ * Has annotations for Room and Retrofit
+ */
 @Entity(tableName = "answer")
 data class Answer(
         @PrimaryKey(autoGenerate = false) var answerId: Int = 0,

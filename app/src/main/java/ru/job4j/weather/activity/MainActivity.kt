@@ -19,7 +19,6 @@ import com.google.android.libraries.places.widget.listener.PlaceSelectionListene
 import kotlinx.android.synthetic.main.activity_main.*
 import moxy.MvpAppCompatActivity
 import moxy.presenter.InjectPresenter
-import moxy.presenter.ProvidePresenter
 import ru.job4j.weather.R
 import ru.job4j.weather.fragments.CallbackToActivity
 import ru.job4j.weather.fragments.FragmentDaysRV
@@ -28,7 +27,6 @@ import ru.job4j.weather.fragments.FragmentMainInfo
 import ru.job4j.weather.presenter.MainActivityPresenter
 import ru.job4j.weather.store.*
 import ru.job4j.weather.view.MainActivityView
-import java.util.*
 
 class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivity {
     private var coordinates: LatLng? = null
@@ -71,12 +69,14 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
-        if (requestCode == 1 && grantResults.isNotEmpty()
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED
-                && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-            initLocListener()
+        if (requestCode == 1 && grantResults.isNotEmpty()) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED ||
+                    grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+                initLocListener()
+            }
         }
     }
+
 
     private fun initPlacesAPI() {
         Places.initialize(this, getString(R.string.google_maps_key))
@@ -88,6 +88,7 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
             })
         }
     }
+
 
     @SuppressLint("MissingPermission")
     private fun initLocListener() {
@@ -101,22 +102,22 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
             override fun onProviderDisabled(provider: String) {}
         }
         val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-        Objects.requireNonNull(locationManager).requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0f, loc)
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0f, loc)
     }
 
     private fun isLocationPermissionGranted(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
                     || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION,
-                        Manifest.permission.ACCESS_FINE_LOCATION), 1)
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION), 1)
                 return false
             }
         }
         return true
     }
 
-    private fun fillingTheUI(day: Int , hour: Int) {
+    private fun fillingTheUI(day: Int, hour: Int) {
         (days_fragment as FragmentDaysRV).updateUI(days, day)
         (hours_fragment as FragmentHoursRV).updateUI(days[day].hours, hour)
         (main_info_fragment as FragmentMainInfo).updateUI(details)
@@ -128,7 +129,7 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
         this.days = days
         this.details = details
         this.currentLocation = city
-        fillingTheUI(day,hour)
+        fillingTheUI(day, hour)
     }
 
     override fun successWithError(code: Int) {
@@ -147,6 +148,6 @@ class MainActivity : MvpAppCompatActivity(), MainActivityView, CallbackToActivit
     }
 
     override fun updatePositionsFromFragment(day: Int, hour: Int) =
-        activityPresenter.changeCurrentDayAndHour(day, hour)
+            activityPresenter.changeCurrentDayAndHour(day, hour)
 }
 

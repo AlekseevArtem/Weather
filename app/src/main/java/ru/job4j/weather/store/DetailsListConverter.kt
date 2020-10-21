@@ -4,8 +4,11 @@ import androidx.room.TypeConverter
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.Serializable
-import java.lang.reflect.Type
 
+/**
+ * Created by Artem Alexeev on 21.10.2020.
+ * Converter for list of Details to Gson(and back)
+ */
 class DetailsListConverter : Serializable {
     @TypeConverter
     fun fromDetailsList(details: List<Answer.Details>?): String = Gson().toJson(details)

@@ -8,45 +8,37 @@ import moxy.MvpPresenter
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Query
 import ru.job4j.weather.App
 import ru.job4j.weather.di.RemoteModule
-
 import ru.job4j.weather.store.Answer
 import ru.job4j.weather.store.Day
 import ru.job4j.weather.store.RoomDB
-
-
 import ru.job4j.weather.view.MainActivityView
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
 
-
+/**
+ * Created by Artem Alexeev on 21.10.2020.
+ * Presenter for MainActivity
+ */
 @InjectViewState
 class MainActivityPresenter : MvpPresenter<MainActivityView>() {
     private var answer: Answer? = null
     private val days: MutableList<Day> = mutableListOf()
-    @Inject
-    lateinit var db: RoomDB
-    @Inject
-    lateinit var jsonAnswerHolderApi: RemoteModule.JsonAnswerHolderApi
+    @Inject lateinit var db: RoomDB
+    @Inject lateinit var jsonAnswerHolderApi: RemoteModule.JsonAnswerHolderApi
     private var day: Int = 0
     private var hour: Int = 0
 
-    init {
-        App.dagger?.inject(this)
-    }
+    init { App.dagger?.inject(this) }
 
     fun getAnswerFromDB(type: Int = Answer.GEO) {
         if (answer == null) {
             GlobalScope.launch {
                 answer = db.getAnswerDao().getAnswer(type)
-                generateDays()
                 answer?.let {
+                    generateDays()
                     withContext(Dispatchers.Main) {
                         viewState.successAnswer(days, it.list[getPositionOfDetails()], it.city, day, hour)
                     }
@@ -90,6 +82,12 @@ class MainActivityPresenter : MvpPresenter<MainActivityView>() {
         return position
     }
 
+
+    /**
+     * Method for generate days. Used only one loop.
+     * Generates Days from Answer. Answer has 40 dates as Integer(seconds).
+     * Count average temperature and find worst weather for hours bigger than 9.
+     */
     private fun generateDays() {
         days.clear()
         var tempDay = ""
@@ -122,7 +120,8 @@ class MainActivityPresenter : MvpPresenter<MainActivityView>() {
         recordTempAndIconOnTheLastDay(sumTemp, countTemp, worstIcon, last = true)
     }
 
-    private fun recordTempAndIconOnTheLastDay(sumTemp: Double, countTemp: Int, worstIcon: Int, last: Boolean = false): Unit =
+    private fun recordTempAndIconOnTheLastDay(sumTemp: Double, countTemp: Int, worstIcon: Int, last: Boolean = false) {
+        if(answer != null){
             days.last().run {
                 if (last) {
                     temperature = "${answer!!.list.last().main.temp.toInt()}°"
@@ -132,4 +131,6 @@ class MainActivityPresenter : MvpPresenter<MainActivityView>() {
                     icon = if (worstIcon < 10) "0${worstIcon}d" else "${worstIcon}d"
                 }
             }
+        }
+    }
 }

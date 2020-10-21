@@ -1,9 +1,5 @@
 package ru.job4j.weather.di
 
-import android.app.Activity
-import android.content.Context
-import com.google.android.gms.maps.model.LatLng
-import com.squareup.picasso.Picasso
 import dagger.Module
 import dagger.Provides
 import retrofit2.Call
@@ -11,10 +7,13 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Query
-import ru.job4j.weather.R
 import ru.job4j.weather.store.Answer
 import javax.inject.Singleton
 
+/**
+ * Created by Artem Alexeev on 21.10.2020.
+ * RemoteModule for network.
+ */
 @Module
 class RemoteModule {
     interface JsonAnswerHolderApi {
